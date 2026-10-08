@@ -18,6 +18,11 @@ app.set('io', io);
 
 app.use(cors());
 app.use(express.json());
+// One line per API request, so a failing phone can be diagnosed from this terminal.
+app.use('/api', (req, res, next) => {
+  res.on('finish', () => console.log(`${req.method} ${req.originalUrl} ${res.statusCode}`));
+  next();
+});
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 app.use('/api/queues', queueRoutes);

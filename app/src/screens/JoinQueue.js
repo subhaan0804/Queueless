@@ -35,7 +35,8 @@ export default function JoinQueue({ navigation }) {
   }, [permission, requestPermission]);
 
   async function lookup(value) {
-    const code = value.trim().toUpperCase();
+    // Keep only letters and digits: a pasted code may carry spaces, hyphens or a trailing newline.
+    const code = value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     setBusy(true);
     setError('');
     try {
@@ -43,7 +44,11 @@ export default function JoinQueue({ navigation }) {
       // A phone may hold tickets in several queues, but not two in the same one.
       const held = (await loadTickets()).find((t) => t.code === code);
       if (held) throw new Error(`You already have a ticket for ${held.queueName}. Open it or leave it first.`);
-      const found = await api(`/queues/${code}`);
+      // Say which code was looked up, so a misread character is easy to spot.
+      const found = await api(`/queues/${code}`).catch((e) => {
+        if (e.status === 404) throw new Error(`No queue has the code ${code}. Check the 6 characters and try again.`);
+        throw e;
+      });
       if (found.status === 'closed') throw new Error('This queue is closed. Ask the shop for a new code.');
       if (found.status === 'paused') throw new Error('Joining is paused for now. Try again in a few minutes.');
       setQueue(found);
