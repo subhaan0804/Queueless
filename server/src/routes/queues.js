@@ -38,7 +38,7 @@ router.post('/:code/join', async (req, res) => {
   const queue = await Queue.findOneAndUpdate(
     { code, status: 'open' },
     { $inc: { lastNumber: 1 } },
-    { new: true }
+    { returnDocument: 'after' }
   );
   if (!queue) {
     const existing = await findQueue(code); // 404 when the code is unknown
