@@ -1,0 +1,16 @@
+import { api } from './api';
+import { removeTicket } from './storage';
+
+// Gives up a ticket: tells the server (so the owner never calls a ghost), then forgets it here.
+// A network failure throws and keeps the ticket, so it is never dropped locally while still
+// waiting on the server. The caller shows the message and the person can retry.
+export async function leaveTicket(ticket) {
+  try {
+    await api(`/tickets/${ticket.ticketId}/leave`, { method: 'POST' });
+  } catch (e) {
+    // 404: the server forgot it. 409: it already ended or is being served. Either way there is
+    // nothing left to leave on the server, only the local copy to remove.
+    if (e.status !== 404 && e.status !== 409) throw e;
+  }
+  return removeTicket(ticket.ticketId);
+}
