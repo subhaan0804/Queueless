@@ -4,52 +4,85 @@ A digital token system for small clinics and shops. The owner opens a queue and 
 
 Stack: React Native (Expo), Node.js (Express + Socket.io), MongoDB. JavaScript only. The full specification is in [PRD.md](PRD.md).
 
-## Run it
+## Set it up
 
-You need Node 18+, MongoDB, and Expo Go on a phone. The laptop and the phone must be on the same Wi-Fi.
+**You need**
 
-1. **Start MongoDB** (local install, or put an Atlas connection string in `server/.env`):
+- **Node.js 20.19.4 or newer** (22 LTS recommended). Check with `node -v`. Older versions, including Node 18, fail on the app's dependencies.
+- **MongoDB**: either MongoDB Community installed on your computer, or a free [MongoDB Atlas](https://www.mongodb.com/atlas) cluster.
+- **Expo Go** on a phone (current version from the app store), for the phone app.
+- The computer and the phone on the **same Wi-Fi network**.
 
-   ```
-   mongod --dbpath ~/mongo-data
-   ```
+No IP address or other machine-specific value needs to be edited in the code.
 
-   or, with the system service: `sudo systemctl start mongod`.
+**1. Clone and install**
 
-2. **Start the server**:
+```
+git clone git@github.com:subhaan0804/Queueless.git
+cd Queueless
+cd server && npm install && cd ..
+cd app && npm install && cd ..
+```
 
-   ```
-   cd server
-   npm install
-   npm run dev
-   ```
+**2. Configure the server**
 
-   `curl localhost:4000/health` should return `{"ok":true}`.
+```
+cp server/.env.example server/.env
+```
 
-3. **Point the app at your laptop.** Find the laptop's LAN IP (for example `192.168.1.20`) and set it in [app/src/config.js](app/src/config.js):
+Open `server/.env`. For a local MongoDB nothing needs changing. For Atlas, paste your connection string into `MONGO_URI` (the file explains how). `server/.env` is git-ignored, so your password never reaches GitHub.
 
-   ```js
-   export const API_URL = 'http://192.168.1.20:4000';
-   ```
+**3. Start MongoDB** (skip this for Atlas)
 
-4. **Start the app**:
+```
+sudo systemctl start mongod        # Linux with the system service
+brew services start mongodb-community   # macOS
+```
 
-   ```
-   cd app
-   npm install
-   npx expo start
-   ```
+Or run `mongod --dbpath <any empty folder>` in its own terminal.
 
-   Scan the Expo QR code with Expo Go. For the demo, use two phones, or one phone and an emulator.
+**4. Start the server**
 
-5. **Optional: the web admin.** The owner side also runs in a browser, from the same code:
+```
+cd server
+npm run dev
+```
 
-   ```
-   cd app
-   npx expo start --web
-   ```
+You should see `MongoDB connected`, then the addresses the server is reachable at. `curl localhost:4000/health` should answer `{"ok":true}`.
 
-   It opens on "Start a queue" and has no customer screens, so it is an admin console for the shop. The browser talks to the server at the same host that served the page (port 4000), so no config is needed. For a static build, run `npx expo export --platform web` and serve the `dist` folder with any static host.
+**5. Start the app**
+
+```
+cd app
+npx expo start
+```
+
+Scan the QR code with Expo Go (Camera app on iPhone, the Expo Go app on Android). The phone finds the server by itself: it asks the Expo dev server for the computer's address and uses port 4000. For the demo use two phones, or one phone plus the web admin below.
+
+**6. Optional: the web admin.** The owner side also runs in a browser from the same code:
+
+```
+cd app
+npx expo start --web
+```
+
+It opens on "Start a queue" and has no customer screens, so it is an admin console for the shop. The browser talks to the server on the same host that served the page (port 4000). For a static build, run `npx expo export --platform web` and serve the `dist` folder with any static host.
+
+## If something does not work
+
+| Symptom | Cause and fix |
+|---|---|
+| App says "Cannot reach the server at http://X:4000" | The message shows the address the app tried. It must match an address the server printed at startup. Make sure the phone and computer are on the same Wi-Fi, and that the server is running. |
+| Same, but the addresses match | The computer's firewall is blocking port 4000 (Linux: allow it in `ufw` or `firewalld`; Windows: allow Node.js through the firewall), or the router isolates devices (guest Wi-Fi, "AP/client isolation"). A phone hotspot with the laptop connected to it is a quick workaround. |
+| Using `npx expo start --tunnel`, or a built app | The tunnel only forwards Expo, not the API. Copy `app/.env.example` to `app/.env`, set `EXPO_PUBLIC_API_URL` to the server's address, and restart with `npx expo start -c`. |
+| Server prints `MONGO_URI is not set` | You skipped step 2. Run `cp server/.env.example server/.env`. |
+| Server prints `MongoDB connection failed` | Local MongoDB is not running (step 3), or, for Atlas, your IP is not in Network Access, the password is wrong (avoid special characters), or the database name is missing from the string. |
+| `Error: listen EADDRINUSE ... 4000` | Something already uses port 4000. Stop it, or change `PORT` in `server/.env` and set `EXPO_PUBLIC_API_URL` in `app/.env` to match. |
+| Expo Go: "Project is incompatible" | Update Expo Go to the latest version from the app store. |
+| Camera denied | Type the 6-character code instead. |
+| No system notification when your number is called | System notifications need a development or production build; in Expo Go you get the in-app banner and the buzz. |
+
+Dependency versions are pinned by `package-lock.json` in both folders.
 
 ## Your-turn alerts
 

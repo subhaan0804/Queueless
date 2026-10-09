@@ -1,5 +1,7 @@
-require('dotenv').config();
+// Read server/.env from the server folder itself, so it works from any working directory.
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env'), quiet: true });
 const http = require('http');
+const os = require('os');
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
@@ -54,12 +56,30 @@ io.on('connection', (socket) => {
   });
 });
 
+// The addresses a phone on the same Wi-Fi can use to reach this server.
+function lanUrls(port) {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((net) => net.family === 'IPv4' && !net.internal)
+    .map((net) => `http://${net.address}:${port}`);
+}
+
+if (!process.env.MONGO_URI) {
+  console.error('MONGO_URI is not set. Copy server/.env.example to server/.env and fill it in.');
+  process.exit(1);
+}
+
 const port = process.env.PORT || 4000;
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB connected');
-    httpServer.listen(port, () => console.log(`Server listening on ${port}`));
+    httpServer.listen(port, () => {
+      console.log(`Server listening on port ${port}`);
+      console.log(`  on this computer: http://localhost:${port}`);
+      console.log('  from a phone (use the address on your Wi-Fi network):');
+      lanUrls(port).forEach((url) => console.log(`    ${url}`));
+    });
   })
   .catch((err) => {
     console.error('MongoDB connection failed:', err.message);
