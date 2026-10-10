@@ -19,7 +19,10 @@ export function Row({ number, name, children }) {
 export default function WaitingList({ waiting, skipped, onReview }) {
   return (
     <View style={styles.list}>
-      <Text style={[type.section, styles.ink]}>Waiting ({waiting.length})</Text>
+      <View style={styles.heading}>
+        <Text style={[type.section, styles.ink]}>Waiting</Text>
+        <Text style={[type.caption, styles.count]}>{waiting.length} {waiting.length === 1 ? 'person' : 'people'}</Text>
+      </View>
       {waiting.length === 0 ? (
         <EmptyStubs message="Nobody is waiting. Share the QR to get people in." />
       ) : (
@@ -38,6 +41,8 @@ export default function WaitingList({ waiting, skipped, onReview }) {
 const styles = StyleSheet.create({
   list: { paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.xl },
   ink: { color: colors.ink },
+  heading: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: space.sm },
+  count: { color: colors.pencil },
   row: {
     minHeight: 56,
     flexDirection: 'row',

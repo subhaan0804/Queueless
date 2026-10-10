@@ -5,9 +5,9 @@ import * as haptics from '../lib/haptics';
 // Fill, border and label colour for each variant.
 const LOOK = {
   primary: (pressed) => ({ bg: pressed ? colors.bluePressed : colors.blue, border: null, text: colors.white }),
-  outline: () => ({ bg: 'transparent', border: colors.ink, text: colors.ink }),
-  danger: () => ({ bg: 'transparent', border: colors.red, text: colors.red }),
-  text: () => ({ bg: 'transparent', border: null, text: colors.ink }),
+  outline: (pressed) => ({ bg: pressed ? colors.fog : 'transparent', border: colors.ink, text: colors.ink }),
+  danger: (pressed) => ({ bg: pressed ? '#F3E0DE' : 'transparent', border: colors.red, text: colors.red }),
+  text: (pressed) => ({ bg: pressed ? colors.fog : 'transparent', border: null, text: colors.ink }),
 };
 
 export default function BigButton({
@@ -35,7 +35,7 @@ export default function BigButton({
         return [
           styles.base,
           { minHeight: height, backgroundColor: look.bg },
-          look.border && { borderWidth: 2, borderColor: look.border },
+          look.border && { borderWidth: 1, borderColor: look.border },
           pressed && styles.pressed,
           disabled && styles.disabled,
           style,
@@ -56,9 +56,14 @@ export default function BigButton({
 }
 
 const styles = StyleSheet.create({
-  base: { borderRadius: radius.sm, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
+  base: {
+    borderRadius: radius.sm,
+    paddingHorizontal: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: { textAlign: 'center' },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },
+  pressed: { transform: [{ translateY: 1 }, { scale: 0.985 }] },
   disabled: { opacity: 0.4 },
   dim: { opacity: 0.6 },
 });

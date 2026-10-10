@@ -7,7 +7,7 @@ import { colors, space, type } from '../theme';
 import { api } from '../lib/api';
 import * as haptics from '../lib/haptics';
 import { goHome } from '../lib/nav';
-import { askNotificationPermission } from '../lib/notify';
+import { registerForPushNotifications } from '../lib/notify';
 import { loadTickets, saveTicket } from '../lib/storage';
 import JoinSheet from '../components/JoinSheet';
 import ScanFrame from '../components/ScanFrame';
@@ -76,7 +76,13 @@ export default function JoinQueue({ navigation }) {
       };
       await saveTicket(ticket);
       haptics.confirm();
-      await askNotificationPermission();
+      const pushToken = await registerForPushNotifications();
+      if (pushToken) {
+        await api(`/tickets/${ticket.ticketId}/notifications`, {
+          method: 'POST',
+          body: { token: pushToken },
+        }).catch(() => {});
+      }
       navigation.replace('MyTicket', { ticket });
     } catch (e) {
       setError(e.message);

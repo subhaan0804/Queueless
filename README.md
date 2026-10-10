@@ -255,6 +255,7 @@ npx expo export --platform web
 | --- | --- | --- | --- | --- |
 | `server/.env` | `MONGO_URI` | Yes | MongoDB connection string | `mongodb+srv://user:password@cluster.mongodb.net/queueless` |
 | `server/.env` | `PORT` | No | HTTP and Socket.io port; defaults to `4000` | `4000` |
+| `server/.env` | `EXPO_PUSH_URL` | For background notifications | Expo Push Service endpoint | `https://exp.host/--/api/v2/push/send` |
 | `app/.env` | `EXPO_PUBLIC_API_URL` | Native: yes; web: optional | API and Socket.io origin | `http://192.168.1.20:4000` |
 
 Never commit `.env` files. Expo public variables are bundled into the client and must not contain secrets. The MongoDB URI must remain server-side.
@@ -270,6 +271,7 @@ All application endpoints are under `/api`. Owner requests send the generated ke
 | `POST` | `/api/queues/:code/join` | Public | Join an open queue: `{ name? }`. |
 | `GET` | `/api/tickets/:id` | Ticket holder | Read ticket status and queue identity. |
 | `POST` | `/api/tickets/:id/leave` | Ticket holder | Leave while waiting. |
+| `POST` | `/api/tickets/:id/notifications` | Ticket holder | Register `{ token }` for background turn notifications. |
 | `GET` | `/api/queues/:code/owner` | Owner key | Read named serving, waiting, and skipped lists. |
 | `POST` | `/api/queues/:code/next` | Owner key | Finish current ticket and serve next. |
 | `POST` | `/api/queues/:code/skip` | Owner key | Skip the current ticket. |
@@ -310,12 +312,20 @@ For production, add HTTPS, authenticated owner accounts, secure secret managemen
 
 ## Notifications
 
-Turn alerts are local to the customer device. The app observes the live socket, detects when the held ticket is called, and triggers the visual and haptic response.
+Turn alerts use two paths:
 
-- Expo Go supports the in-app banner and haptics.
-- Full system notifications require a development or production build.
-- A stopped app or disconnected phone cannot receive the live event.
-- No Firebase account or remote push service is currently required.
+1. The live socket drives the in-app banner and haptics while the app is open.
+2. The customer registers an Expo push token for the ticket. When the owner calls that ticket, the server sends a push notification through Expo Push Service, allowing the phone to alert the customer while the app is backgrounded.
+
+Requirements for background notifications:
+
+- Use an Android/iOS development or production build; Expo Go does not support the complete notification path on Android.
+- Grant notification permission after joining a queue.
+- Configure an EAS project ID so Expo can issue the push token; EAS adds this to the app configuration during setup.
+- Set `EXPO_PUSH_URL` in `server/.env`.
+- Keep the phone connected to the internet so Expo can deliver the notification.
+
+The server treats push as best effort: a notification outage never prevents the queue from advancing. A phone that has disabled notifications, has no network, or has been force-stopped may not receive the alert.
 
 ## Design system
 

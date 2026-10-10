@@ -60,6 +60,9 @@ export default function StartQueue({ navigation }) {
           <Text accessibilityRole="header" style={[type.title, styles.ink]}>
             Start a queue
           </Text>
+          <Text style={[type.body, styles.intro]}>
+            Give your line a name and choose a starting estimate. You can adjust the flow as people arrive.
+          </Text>
           <Field
             label="Shop or clinic name"
             value={name}
@@ -73,7 +76,7 @@ export default function StartQueue({ navigation }) {
             returnKeyType="done"
             style={styles.field}
           />
-          <Text style={[type.body, styles.ink, styles.field]}>Minutes per person</Text>
+          <Text style={[type.body, styles.ink, styles.field]}>Starting wait estimate</Text>
           <View style={styles.stepper}>
             <StepButton label="Fewer minutes" symbol={'−'} disabled={minutes <= 1} onPress={() => setMinutes(minutes - 1)} />
             <Text accessibilityLiveRegion="polite" style={[type.stat, styles.minutes]}>
@@ -94,6 +97,7 @@ const styles = StyleSheet.create({
   ink: { color: colors.ink },
   pencil: { color: colors.pencil, marginTop: space.sm },
   body: { paddingHorizontal: space.xl, paddingTop: space.sm },
+  intro: { color: colors.pencil, maxWidth: 440, marginTop: space.sm, lineHeight: 23 },
   field: { marginTop: space.xl },
   stepper: { marginTop: space.sm, flexDirection: 'row', alignItems: 'center', gap: space.lg },
   step: {

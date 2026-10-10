@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, space, type } from '../theme';
+import { colors, radius, space, type } from '../theme';
 import * as haptics from '../lib/haptics';
 import { goHome } from '../lib/nav';
 import { clearOwner } from '../lib/storage';
@@ -85,8 +85,12 @@ export default function OwnerDashboard({ navigation, route }) {
             {owner.name}
           </Text>
         </Pressable>
+        <Text style={[type.caption, styles.subtitle]}>Your queue is live. Share the code to let people in.</Text>
         <View style={styles.codeRow}>
-          <Text style={[type.body, styles.ink]}>Code {owner.code}</Text>
+          <View style={styles.codeBadge}>
+            <Text style={[type.caption, styles.codeLabel]}>QUEUE CODE</Text>
+            <Text style={[type.code, styles.code]}>{owner.code}</Text>
+          </View>
           <BigButton label="Show QR" variant="outline" height={48} onPress={() => setSheet('qr')} />
         </View>
       </View>
@@ -149,6 +153,10 @@ const styles = StyleSheet.create({
   ink: { color: colors.ink },
   pause: { minHeight: 48, paddingHorizontal: space.sm, flexDirection: 'row', alignItems: 'center', gap: space.sm },
   header: { paddingHorizontal: space.xl, paddingBottom: space.md },
-  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  subtitle: { color: colors.pencil, marginTop: space.sm, marginBottom: space.lg },
+  codeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.md },
+  codeBadge: { flex: 1, paddingVertical: space.sm, paddingHorizontal: space.md, backgroundColor: colors.white, borderRadius: radius.sm },
+  codeLabel: { color: colors.pencil, letterSpacing: 1 },
+  code: { color: colors.ink, fontSize: 26, lineHeight: 30, letterSpacing: 3 },
   messageRow: { minHeight: 40, paddingHorizontal: space.xl, justifyContent: 'center' },
 });

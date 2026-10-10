@@ -1,4 +1,5 @@
 import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Local notifications only: the phone raises them itself, with no push server, account or token.
@@ -40,6 +41,25 @@ export async function askNotificationPermission() {
     if (!granted && canAskAgain) await N.requestPermissionsAsync();
   } catch {
     // notifications are a bonus; never block joining over them
+  }
+}
+
+// Returns the device token used by the server for background delivery.
+// This requires a development or production build; Expo Go intentionally skips it.
+export async function registerForPushNotifications() {
+  if (!SUPPORTED) return null;
+  try {
+    const N = notifications();
+    await ensureChannel();
+    const current = await N.getPermissionsAsync();
+    const permissions = current.granted || !current.canAskAgain ? current : await N.requestPermissionsAsync();
+    if (!permissions.granted) return null;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+    if (!projectId) return null;
+    const token = await N.getExpoPushTokenAsync({ projectId });
+    return token.data;
+  } catch {
+    return null;
   }
 }
 
