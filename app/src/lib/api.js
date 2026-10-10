@@ -1,6 +1,7 @@
 import { API_URL } from '../config';
 
-const NETWORK_ERROR = 'Cannot reach the server. Check that both phones are on the same Wi-Fi.';
+const NETWORK_ERROR = (url) =>
+  `Cannot reach the server at ${url}. Check app/.env, Windows Firewall, and that the phone is on the same Wi-Fi.`;
 
 // Resolves with the JSON body, or throws an Error whose message is safe to show.
 export async function api(path, { method = 'GET', body, ownerKey } = {}) {
@@ -15,7 +16,7 @@ export async function api(path, { method = 'GET', body, ownerKey } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error(NETWORK_ERROR);
+    throw new Error(NETWORK_ERROR(API_URL));
   }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
