@@ -1,12 +1,16 @@
 import { isRunningInExpoGo } from 'expo';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { alertText } from './alertText';
 
-// Local notifications only: the phone raises them itself, with no push server, account or token.
+// Notifications raised by the phone itself need no account, token or server, and cover alerts
+// while the app is alive (including scheduled leave reminders). registerForPushNotifications is
+// the one exception: it hands the server a device token so a called number can also reach a phone
+// whose app is closed, through the Expo push service.
 //
-// Expo Go cannot run this on Android (SDK 53+): merely loading expo-notifications there throws,
-// because the library registers a push-token listener on import. So in Expo Go the library is
-// never loaded and the in-app banner is the only alert. A development or production build
+// Expo Go cannot run any of this on Android (SDK 53+): merely loading expo-notifications there
+// throws, because the library registers a push-token listener on import. So in Expo Go the library
+// is never loaded and the in-app banner is the only alert. A development or production build
 // supports the full thing.
 const SUPPORTED = !isRunningInExpoGo();
 
@@ -41,6 +45,25 @@ export async function askNotificationPermission() {
     if (!granted && canAskAgain) await N.requestPermissionsAsync();
   } catch {
     // notifications are a bonus; never block joining over them
+  }
+}
+
+// Returns the device token used by the server for background delivery.
+// This requires a development or production build; Expo Go intentionally skips it.
+export async function registerForPushNotifications() {
+  if (!SUPPORTED) return null;
+  try {
+    const N = notifications();
+    await ensureChannel();
+    const current = await N.getPermissionsAsync();
+    const permissions = current.granted || !current.canAskAgain ? current : await N.requestPermissionsAsync();
+    if (!permissions.granted) return null;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+    if (!projectId) return null;
+    const token = await N.getExpoPushTokenAsync({ projectId });
+    return token.data;
+  } catch {
+    return null;
   }
 }
 

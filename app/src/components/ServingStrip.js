@@ -18,6 +18,6 @@ export default function ServingStrip({ number, name, reduceMotion }) {
 }
 
 const styles = StyleSheet.create({
-  strip: { paddingHorizontal: space.xl, paddingVertical: space.lg, backgroundColor: colors.yellow },
+  strip: { marginHorizontal: space.xl, marginTop: space.sm, padding: space.xl, borderRadius: 18, backgroundColor: colors.yellow },
   ink: { color: colors.ink },
 });

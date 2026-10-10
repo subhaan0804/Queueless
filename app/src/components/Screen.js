@@ -19,5 +19,5 @@ export default function Screen({ bg = colors.paper, bar = 'dark-content', offlin
 const styles = StyleSheet.create({
   root: { flex: 1 },
   // On a phone the column is the whole screen; on a wide browser it stays phone-shaped and centred.
-  column: { flex: 1, width: '100%', maxWidth: 640, alignSelf: 'center' },
+  column: { flex: 1, width: '100%', maxWidth: 680, alignSelf: 'center' },
 });

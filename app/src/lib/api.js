@@ -4,7 +4,10 @@ import { API_URL } from '../config';
 const TIMEOUT_MS = 10000;
 
 const networkError = () =>
-  new Error(`Cannot reach the server at ${API_URL}. Check that both phones are on the same Wi-Fi.`);
+  new Error(
+    `Cannot reach the server at ${API_URL}. Check that the phone and the computer are on the same Wi-Fi, ` +
+      "and that the computer's firewall allows port 4000."
+  );
 
 // Resolves with the JSON body, or throws an Error whose message is safe to show.
 export async function api(path, { method = 'GET', body, ownerKey } = {}) {

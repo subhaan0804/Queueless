@@ -17,8 +17,6 @@ const styles = StyleSheet.create({
   dock: {
     padding: space.xl,
     paddingTop: space.md,
-    backgroundColor: colors.white,
-    borderTopWidth: 1,
-    borderTopColor: colors.hairline,
+    backgroundColor: colors.paper,
   },
 });

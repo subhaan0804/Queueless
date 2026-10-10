@@ -39,4 +39,18 @@ router.post('/:id/leave', async (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/:id/notifications', async (req, res) => {
+  const token = typeof req.body?.token === 'string' ? req.body.token.trim() : '';
+  if (!/^Expo(nent)?PushToken\[.+\]$/.test(token)) {
+    throw new HttpError(400, 'Invalid notification token.');
+  }
+  const ticket = await findTicket(req.params.id);
+  if (!['waiting', 'serving'].includes(ticket.status)) {
+    throw new HttpError(409, 'This ticket is no longer active.');
+  }
+  ticket.expoPushToken = token;
+  await ticket.save();
+  res.json({ ok: true });
+});
+
 module.exports = router;

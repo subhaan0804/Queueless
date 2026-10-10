@@ -71,7 +71,9 @@ if (!process.env.MONGO_URI) {
 
 const port = process.env.PORT || 4000;
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    dbName: process.env.MONGO_DB_NAME || undefined,
+  })
   .then(() => {
     console.log('MongoDB connected');
     httpServer.listen(port, () => {

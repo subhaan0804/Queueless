@@ -27,7 +27,7 @@ Order of presentation: 1 → 2 → 3 → 4, which follows one request from the s
 
 ## Part 1: Server and database (Member 1)
 
-**Files:** `server/src/index.js`, `models/Queue.js`, `models/Ticket.js`, `routes/queues.js`, `routes/owner.js`, `routes/tickets.js`, `lib/code.js`, `lib/auth.js`, `lib/http.js`, `lib/snapshot.js`
+**Files:** `server/src/index.js`, `models/Queue.js`, `models/Ticket.js`, `routes/queues.js`, `routes/owner.js`, `routes/tickets.js`, `lib/code.js`, `lib/auth.js`, `lib/http.js`, `lib/snapshot.js`, `lib/push.js`
 
 **Explain**
 
@@ -43,6 +43,7 @@ Order of presentation: 1 → 2 → 3 → 4, which follows one request from the s
 - **Validation by hand.** Names are trimmed and length-capped (shop 40, customer 30). Empty shop name gives 400. `defaultServiceMin` is clamped to 1–60.
 - **Errors.** `HttpError(status, message)` is thrown anywhere. Express 5 forwards errors from async handlers to one error middleware. A malformed ticket id (Mongoose `CastError`) becomes 404.
 - **Status codes:** 400 bad input, 403 wrong key, 404 unknown code or ticket, 409 closed, paused or cannot leave now.
+- **Push for a closed app.** A phone can register an Expo push token for its ticket (`POST /tickets/:id/notifications`, stored on the ticket; junk tokens get 400, finished tickets 409). When Next or Skip moves a ticket to `serving`, `lib/push.js` posts a message to the Expo push service (the URL comes from `EXPO_PUSH_URL`; unset means off). It is best effort and not awaited, so a push outage is logged and never delays the line. The message carries the number and shop name only, never the customer's name.
 
 **Estimate (in `lib/snapshot.js`)**
 
@@ -105,7 +106,7 @@ Skipped and abandoned tickets are excluded because they took no real service tim
 - **"Your number is called" alerts.** `useTicketAlerts` runs above all screens (in `Navigator.js`). It joins the room of every held ticket on the one shared socket and watches each `queue:update`. When `serving` equals a held number, it alerts once per call:
   - **App open, on any other screen:** a yellow `CalledBanner` slides down ("Number 14 is being called. Go to the counter now.") with the double success haptic. Tapping it opens the ticket. It clears itself when the number moves on.
   - **App open on that ticket:** nothing extra, because the ticket screen already turns yellow and buzzes.
-  - **App in the background:** a system notification ("It is your turn"), raised locally by `expo-notifications` with no push server. Tapping it opens the ticket. Permission is requested right after joining. This part needs a development or production build: Expo Go on Android cannot load the library (it throws on import), so `lib/notify.js` detects Expo Go with `isRunningInExpoGo()` and skips it, leaving the banner as the only alert.
+  - **App in the background:** a system notification ("It is your turn"), raised locally by `expo-notifications`. Separately, after joining, `registerForPushNotifications` gets an Expo push token and gives it to the server, so the server can reach a phone whose app is closed. Tapping it opens the ticket. Permission is requested right after joining. This part needs a development or production build: Expo Go on Android cannot load the library (it throws on import), so `lib/notify.js` detects Expo Go with `isRunningInExpoGo()` and skips it, leaving the banner as the only alert.
   - A call that arrived while the app was in the background shows as a banner when the app returns.
 - **"Leave in X min" travel timer.** On a waiting ticket the customer says how many minutes away they are (Here, 5, 10, 20, 30). The app turns the wait estimate into a personal instruction:
   - `leaveIn = max(0, wait - travel - 2)`, where `wait` is the same `ceil(ahead * avg + serving ? avg / 2 : 0)` used everywhere and 2 minutes is a safety buffer (`lib/eta.js`).
@@ -120,7 +121,7 @@ Skipped and abandoned tickets are excluded because they took no real service tim
 - A customer who clears app data loses their tickets.
 - The one-ticket-per-queue rule is enforced on the phone only. The server cannot tell two devices apart, so someone could join the same queue twice from two phones.
 - The leave moment is a prediction from the last snapshot. If the line slows while the phone is asleep, a scheduled reminder cannot be updated, so it can be early.
-- Alerts need a live socket. With no push server (no Firebase, APNs or Expo push service), a phone the system has fully put to sleep, or an app that was swiped away, cannot be reached, so no notification arrives. Foreground and recently backgrounded apps are covered. Real push is the fix and is out of scope.
+- The in-app and local alerts need a live socket, so on their own they cannot reach a phone the system has fully put to sleep or an app that was swiped away. Server push covers that, but it only works in a development or production build with an EAS project id, and on Android it is delivered through Google's Firebase Cloud Messaging. In Expo Go neither exists, so only the banner works.
 - Leaving needs the server. With no connection a ticket cannot be removed, which is what stops the owner calling a ghost.
 - The wait shown is never below 1 minute, even for the first person in an idle queue.
 
@@ -195,7 +196,7 @@ Expo with React Native Web. Metro resolves `Navigator.web.js` for the browser an
 The server answers 404 (or 403 for a wrong key). The ticket screen shows the closed state with a way home, and the owner dashboard clears its record and returns to the start, so nobody is trapped.
 
 **15. How does the customer find out their number was called, and where does it fail?**
-A watcher above all screens listens on the shared socket for every queue the phone holds a ticket in. On a match it shows a banner and buzzes if the app is open, or raises a local system notification if the app is in the background. It fails when the operating system suspends the app, because no socket means no update and there is no push server to wake the phone. Notifications are local, so they need no account, token or third-party service.
+Three layers. A watcher above all screens listens on the shared socket for every queue the phone holds a ticket in and shows a banner and a buzz if the app is open. If the app is in the background but connected, the phone raises a local system notification. And for a closed app, the server pushes through the Expo push service to the token the phone registered. The first layer works everywhere, including Expo Go. The other two need a development or production build, and the third also needs an EAS project id and, on Android, Firebase Cloud Messaging credentials, so it is optional and best effort: a push outage never stops the queue.
 
 **16. How does the "Leave in X min" feature work, and why is it reliable?**
 It subtracts the customer's travel time and a 2-minute buffer from the wait estimate (`max(0, wait - travel - 2)`) and counts down from the moment the latest snapshot arrived. Every snapshot recomputes it, so it tracks the real speed of the line. The same moment is also given to the phone's own notification scheduler in builds that support it. It is a prediction, not a promise: it is only as good as the wait estimate.
@@ -204,4 +205,4 @@ It subtracts the customer's travel time and a 2-minute buffer from the wait esti
 It is a read-only page at `/?display=CODE` that shows the serving number, the next five numbers and the join QR, and updates live over the same Socket.io room as the phones. It uses the public snapshot, which holds numbers only, so no names are shown and no owner key is needed.
 
 **18. What would you add with more time?**
-Push notifications that reach a sleeping phone, owner accounts (so a queue survives a lost phone and works from phone and browser together), multiple counters, a shop display screen, HTTPS and rate limiting, and deployment.
+Push that does not depend on a third-party service, owner accounts (so a queue survives a lost phone and works from phone and browser together), multiple counters, a shop display screen, HTTPS and rate limiting, and deployment.

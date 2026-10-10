@@ -28,10 +28,10 @@ export default function TopBar({ navigation, color = colors.ink, right }) {
 const styles = StyleSheet.create({
   row: {
     minHeight: 48,
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  home: { minHeight: 48, flexDirection: 'row', alignItems: 'center' },
+  home: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 2 },
 });
