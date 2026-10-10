@@ -3,47 +3,50 @@ import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, space, type } from '../theme';
+import { alertText } from '../lib/alertText';
 import { NATIVE_DRIVER } from '../lib/motion';
 import useReducedMotion from '../hooks/useReducedMotion';
 
 const HIDDEN = -300; // far enough off-screen on any phone
 
-// "Yellow means go": slides over whatever screen the person is on when a held number is called.
-export default function CalledBanner({ ticket, onOpen, onDismiss }) {
+// "Yellow means go": slides over whatever screen the person is on when a held number is called, or
+// when it is time to set off. `alert` is { kind: 'called' | 'leave', ticket } or null.
+export default function AlertBanner({ alert, onOpen, onDismiss }) {
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
   const y = useRef(new Animated.Value(HIDDEN)).current;
   const last = useRef(null);
-  if (ticket) last.current = ticket; // keeps the text while the banner slides back out
+  if (alert) last.current = alert; // keeps the text while the banner slides back out
 
   useEffect(() => {
     Animated.timing(y, {
-      toValue: ticket ? 0 : HIDDEN,
+      toValue: alert ? 0 : HIDDEN,
       duration: reduceMotion ? 0 : 200,
       useNativeDriver: NATIVE_DRIVER,
     }).start();
-  }, [ticket, reduceMotion, y]);
+  }, [alert, reduceMotion, y]);
 
   const shown = last.current;
   if (!shown) return null;
+  const { title, body } = alertText(shown.kind, shown.ticket);
   return (
     <Animated.View
       accessibilityLiveRegion="assertive"
-      aria-hidden={!ticket}
+      aria-hidden={!alert}
       style={[
         styles.banner,
-        { paddingTop: insets.top + space.sm, transform: [{ translateY: y }], pointerEvents: ticket ? 'auto' : 'none' },
+        { paddingTop: insets.top + space.sm, transform: [{ translateY: y }], pointerEvents: alert ? 'auto' : 'none' },
       ]}
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Number ${shown.number} is being called. Open ticket`}
-        onPress={() => onOpen(shown)}
+        accessibilityLabel={`${title}. Open ticket`}
+        onPress={() => onOpen(shown.ticket)}
         style={styles.text}
       >
-        <Text style={[type.section, styles.ink]}>Number {shown.number} is being called</Text>
-        <Text style={[type.body, styles.ink]} numberOfLines={2}>
-          {shown.queueName}. Go to the counter now.
+        <Text style={[type.section, styles.ink]}>{title}</Text>
+        <Text style={[type.body, styles.ink]} numberOfLines={3}>
+          {body}
         </Text>
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Dismiss" onPress={onDismiss} style={styles.close}>

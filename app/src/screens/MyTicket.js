@@ -12,12 +12,14 @@ import { barStyle, LOOK, positionLine, textColor, ticketState } from '../lib/tic
 import useLiveQueue from '../hooks/useLiveQueue';
 import useReducedMotion from '../hooks/useReducedMotion';
 import useTicketFeel from '../hooks/useTicketFeel';
+import useTravel from '../hooks/useTravel';
 import BigButton from '../components/BigButton';
 import ConfirmSheet from '../components/ConfirmSheet';
 import LineDots from '../components/LineDots';
 import Screen from '../components/Screen';
 import TicketFace from '../components/TicketFace';
 import TopBar from '../components/TopBar';
+import TravelPicker from '../components/TravelPicker';
 
 const ENDED = ['done', 'skipped', 'closed'];
 
@@ -25,7 +27,8 @@ export default function MyTicket({ navigation, route }) {
   const record = route.params.ticket;
   const insets = useSafeAreaInsets();
   const reduceMotion = useReducedMotion();
-  const { snapshot, online } = useLiveQueue(record.code, () => animateLayout(reduceMotion));
+  const { snapshot, receivedAt, online } = useLiveQueue(record.code, () => animateLayout(reduceMotion));
+  const travel = useTravel(record, snapshot, receivedAt);
   const [endStatus, setEndStatus] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -99,6 +102,15 @@ export default function MyTicket({ navigation, route }) {
           </Animated.View>
         )}
         {live && ahead !== null && kind !== 'turn' && <LineDots ahead={ahead} />}
+        {live && ahead !== null && kind !== 'turn' && (
+          <TravelPicker
+            value={travel.travelMin}
+            onChange={travel.choose}
+            leaveIn={travel.leaveIn}
+            wait={minutes}
+            color={color}
+          />
+        )}
         {live && snapshot && snapshot.status === 'paused' && (
           <Text style={[type.body, { color }]}>Joining is paused. Your place is safe.</Text>
         )}

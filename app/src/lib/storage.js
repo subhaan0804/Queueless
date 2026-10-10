@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const OWNER = 'queueless.owner'; // { code, ownerKey, name }
-const TICKETS = 'queueless.tickets'; // [{ ticketId, code, number, queueName, issuedAt }], one per queue joined
+const TICKETS = 'queueless.tickets'; // [{ ticketId, code, number, queueName, issuedAt, travelMin? }], one per queue joined
 const LEGACY_TICKET = 'queueless.ticket'; // the single record the first version wrote
 
 async function load(key) {
@@ -44,6 +44,12 @@ export async function loadTickets() {
 export async function saveTicket(ticket) {
   const others = (await loadTickets()).filter((t) => t.ticketId !== ticket.ticketId);
   await writeTickets([...others, ticket]);
+}
+
+// Changes fields of one held ticket, such as how far away its owner is.
+export async function updateTicket(ticketId, changes) {
+  const tickets = (await loadTickets()).map((t) => (t.ticketId === ticketId ? { ...t, ...changes } : t));
+  await writeTickets(tickets);
 }
 
 // Returns what is left, so the caller can decide where to go next.

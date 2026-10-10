@@ -5,14 +5,15 @@ import * as haptics from '../lib/haptics';
 import { notifyCalled, onNotificationTap } from '../lib/notify';
 import { socket } from '../lib/socket';
 import { loadTickets, onTicketsChange } from '../lib/storage';
+import useLeaveAlerts from './useLeaveAlerts';
 
 // Watches every queue this phone holds a ticket in, from any screen, and says so when a number
-// is called: a banner and a buzz while the app is open, a system notification once it is in
-// the background. It only works while the socket is alive: with no push server, a phone the
-// system has fully put to sleep cannot be reached.
+// is called, or when it is time to set off (see useLeaveAlerts): a banner and a buzz while the app
+// is open, a system notification once it is in the background. Calls need the socket to be alive:
+// with no push server, a phone the system has fully put to sleep cannot be told a number was called.
 export default function useTicketAlerts(navigationRef) {
   const [tickets, setTickets] = useState([]);
-  const [called, setCalled] = useState(null); // the ticket shown in the banner
+  const [alert, setAlert] = useState(null); // { kind: 'called' | 'leave', ticket } shown in the banner
   const calling = useRef(new Map()); // tickets being called right now, so each call alerts once
 
   useEffect(() => {
@@ -22,27 +23,40 @@ export default function useTicketAlerts(navigationRef) {
 
   const open = useCallback(
     (ticket) => {
-      setCalled(null);
+      setAlert(null);
       if (navigationRef.isReady()) navigationRef.dispatch(StackActions.push('MyTicket', { ticket }));
     },
     [navigationRef]
   );
+
+  // The ticket screen already turns yellow and buzzes, so the banner would repeat it.
+  const viewing = useCallback(
+    (ticket) => {
+      const route = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
+      return !!route && route.name === 'MyTicket' && route.params.ticket.ticketId === ticket.ticketId;
+    },
+    [navigationRef]
+  );
+
+  const showLeave = useCallback(
+    (ticket) => {
+      haptics.nudge();
+      if (!viewing(ticket)) setAlert({ kind: 'leave', ticket });
+    },
+    [viewing]
+  );
+  useLeaveAlerts(tickets, showLeave);
 
   useEffect(() => {
     if (!tickets.length) return undefined;
     const ids = new Set(tickets.map((t) => t.ticketId));
     calling.current.forEach((_, id) => !ids.has(id) && calling.current.delete(id));
 
-    // The ticket screen already turns yellow and buzzes, so the banner would repeat it.
-    const viewing = (ticket) => {
-      const route = navigationRef.isReady() ? navigationRef.getCurrentRoute() : null;
-      return !!route && route.name === 'MyTicket' && route.params.ticket.ticketId === ticket.ticketId;
-    };
     const announce = (ticket) => {
       if (AppState.currentState !== 'active') notifyCalled(ticket);
       else if (!viewing(ticket)) {
         haptics.turn();
-        setCalled(ticket);
+        setAlert({ kind: 'called', ticket });
       }
     };
 
@@ -57,7 +71,9 @@ export default function useTicketAlerts(navigationRef) {
             calling.current.set(ticket.ticketId, ticket);
             announce(ticket);
           } else if (!isCalled && calling.current.delete(ticket.ticketId)) {
-            setCalled((current) => (current && current.ticketId === ticket.ticketId ? null : current));
+            setAlert((current) =>
+              current && current.kind === 'called' && current.ticket.ticketId === ticket.ticketId ? null : current
+            );
           }
         });
     };
@@ -66,7 +82,7 @@ export default function useTicketAlerts(navigationRef) {
       const waiting = [...calling.current.values()].find((t) => !viewing(t));
       if (state === 'active') {
         if (!socket.connected) socket.connect();
-        if (waiting) setCalled(waiting);
+        if (waiting) setAlert({ kind: 'called', ticket: waiting });
       }
     });
     const stopTap = onNotificationTap((id) => {
@@ -84,7 +100,7 @@ export default function useTicketAlerts(navigationRef) {
       appState.remove();
       stopTap();
     };
-  }, [tickets, navigationRef, open]);
+  }, [tickets, navigationRef, open, viewing]);
 
-  return { called, open, dismiss: () => setCalled(null) };
+  return { alert, open, dismiss: () => setAlert(null) };
 }

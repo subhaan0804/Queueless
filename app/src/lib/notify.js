@@ -1,5 +1,6 @@
 import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
+import { alertText } from './alertText';
 
 // Local notifications only: the phone raises them itself, with no push server, account or token.
 //
@@ -43,20 +44,53 @@ export async function askNotificationPermission() {
   }
 }
 
+function contentFor(kind, ticket) {
+  const { title, body } = alertText(kind, ticket);
+  return { title, body, data: { ticketId: ticket.ticketId } };
+}
+
+// Shows right now: used when a number is called while the app is in the background.
 export async function notifyCalled(ticket) {
   if (!SUPPORTED) return;
   try {
     await ensureChannel();
     await notifications().scheduleNotificationAsync({
-      content: {
-        title: 'It is your turn',
-        body: `Number ${ticket.number} at ${ticket.queueName}. Go to the counter now.`,
-        data: { ticketId: ticket.ticketId },
-      },
+      content: contentFor('called', ticket),
       trigger: Platform.OS === 'android' ? { channelId: CHANNEL } : null, // null: show now
     });
   } catch {
     // not permitted or unsupported: the banner covers the foreground case
+  }
+}
+
+// A fixed identifier per ticket, so scheduling again replaces the earlier reminder instead of
+// stacking a second one, even after the app has been restarted.
+const reminderId = (ticketId) => `leave-${ticketId}`;
+
+// Asks the phone's own scheduler to say "time to head back" at `atMs`. It then arrives even if
+// the app has been suspended in the meantime (development or production builds only).
+export async function scheduleLeaveReminder(ticket, atMs) {
+  if (!SUPPORTED) return;
+  const seconds = Math.ceil((atMs - Date.now()) / 1000);
+  if (seconds < 1) return;
+  try {
+    await ensureChannel();
+    await notifications().scheduleNotificationAsync({
+      identifier: reminderId(ticket.ticketId),
+      content: contentFor('leave', ticket),
+      trigger: { type: 'timeInterval', seconds, ...(Platform.OS === 'android' ? { channelId: CHANNEL } : {}) },
+    });
+  } catch {
+    // the in-app banner still fires while the app is open
+  }
+}
+
+export async function cancelLeaveReminder(ticketId) {
+  if (!SUPPORTED) return;
+  try {
+    await notifications().cancelScheduledNotificationAsync(reminderId(ticketId));
+  } catch {
+    // nothing was scheduled
   }
 }
 

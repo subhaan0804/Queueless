@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { socket } from '../lib/socket';
 
-// Returns the latest snapshot for a queue and whether the socket is connected.
+// Returns the latest snapshot for a queue, when it arrived, and whether the socket is connected.
 // `beforeUpdate` runs just before each new snapshot is applied: the moment to
 // call LayoutAnimation, which must be armed before the state change.
 export default function useLiveQueue(code, beforeUpdate) {
-  const [snapshot, setSnapshot] = useState(null);
+  const [live, setLive] = useState({ snapshot: null, receivedAt: 0 });
   const [online, setOnline] = useState(true);
   const before = useRef(beforeUpdate);
   before.current = beforeUpdate;
@@ -21,7 +21,7 @@ export default function useLiveQueue(code, beforeUpdate) {
     const update = (next) => {
       if (next.code !== code) return;
       if (before.current) before.current(next);
-      setSnapshot(next);
+      setLive({ snapshot: next, receivedAt: Date.now() });
     };
 
     socket.on('connect', join);
@@ -40,5 +40,5 @@ export default function useLiveQueue(code, beforeUpdate) {
     };
   }, [code]);
 
-  return { snapshot, online };
+  return { snapshot: live.snapshot, receivedAt: live.receivedAt, online };
 }

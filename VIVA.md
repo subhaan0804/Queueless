@@ -107,6 +107,11 @@ Skipped and abandoned tickets are excluded because they took no real service tim
   - **App open on that ticket:** nothing extra, because the ticket screen already turns yellow and buzzes.
   - **App in the background:** a system notification ("It is your turn"), raised locally by `expo-notifications` with no push server. Tapping it opens the ticket. Permission is requested right after joining. This part needs a development or production build: Expo Go on Android cannot load the library (it throws on import), so `lib/notify.js` detects Expo Go with `isRunningInExpoGo()` and skips it, leaving the banner as the only alert.
   - A call that arrived while the app was in the background shows as a banner when the app returns.
+- **"Leave in X min" travel timer.** On a waiting ticket the customer says how many minutes away they are (Here, 5, 10, 20, 30). The app turns the wait estimate into a personal instruction:
+  - `leaveIn = max(0, wait - travel - 2)`, where `wait` is the same `ceil(ahead * avg + serving ? avg / 2 : 0)` used everywhere and 2 minutes is a safety buffer (`lib/eta.js`).
+  - It is anchored to when the latest snapshot arrived and counts down in real time (`useNow`, `useTravel`). Each new snapshot re-computes it, so it follows the line as it speeds up or slows down.
+  - The distance is saved on the ticket in storage. `useLeaveAlerts`, running above all screens with the called-watcher, fires a banner and a buzz at the leave moment, once per choice. In a development or production build it also hands the same moment to the phone's own scheduler (`scheduleLeaveReminder`, with a fixed identifier per ticket so it is replaced, not duplicated), which can arrive even when the app is suspended.
+  - It is entirely client-side: the server is not involved.
 - **Several tickets per phone.** A phone can hold one ticket in each of several queues, but not two in the same queue: the join screen checks the code against held tickets and shows "You already have a ticket for X. Open it or leave it first." Home always offers "Join a queue", plus a "My tickets" panel when any are held. `Tickets.js` lists them with live status (Waiting, Your turn, Done, Skipped, Closed), opens one, removes one, or joins another queue.
 - **Leave or remove.** `leaveTicket()` calls `POST /tickets/:id/leave` (only allowed while `waiting`), then deletes the local copy. A 404 (server forgot it) or 409 (already ended) still removes it locally, since nothing is left to leave on the server. A network failure keeps the ticket and shows the error, so a ticket is never dropped on the phone while the owner would still call it.
 
@@ -114,6 +119,7 @@ Skipped and abandoned tickets are excluded because they took no real service tim
 
 - A customer who clears app data loses their tickets.
 - The one-ticket-per-queue rule is enforced on the phone only. The server cannot tell two devices apart, so someone could join the same queue twice from two phones.
+- The leave moment is a prediction from the last snapshot. If the line slows while the phone is asleep, a scheduled reminder cannot be updated, so it can be early.
 - Alerts need a live socket. With no push server (no Firebase, APNs or Expo push service), a phone the system has fully put to sleep, or an app that was swiped away, cannot be reached, so no notification arrives. Foreground and recently backgrounded apps are covered. Real push is the fix and is out of scope.
 - Leaving needs the server. With no connection a ticket cannot be removed, which is what stops the owner calling a ghost.
 - The wait shown is never below 1 minute, even for the first person in an idle queue.
@@ -136,6 +142,7 @@ Skipped and abandoned tickets are excluded because they took no real service tim
 - **`RollingNumber`:** each digit is a clipped column of 0–9 that slides by `translateY` over 450 ms. Digits are keyed from the right so the units column stays mounted when 9 becomes 10. Size follows the system font scale up to 1.3 so numerals never overflow.
 - **Design system.** Tokens in `theme.js` (ink, blue, yellow, paper, one saturated colour per screen). Plain rows with hairlines instead of cards. Empty states are three dashed ticket outlines instead of an illustration. Buttons are at least 48 dp; Next is 72 dp.
 - **Web.** The same screens render in a browser: `Screen` keeps a centred column up to 640 px wide, `Sheet` is capped to the same width, and `TopBar` hides the Home button because the web admin has no other role.
+- **Shop display screen.** The web build also serves `/?display=CODE`: a full-screen page for a TV or wall monitor, with the number being served as large as the window allows (the same `RollingNumber`, so it rolls when it changes), the next five numbers, and the QR and code to join. It reads the public snapshot over the same socket, so it needs no key and, like all public data, shows numbers only, never names. A phone-width window stacks the same content. The owner reaches it from the admin dashboard ("Open display", plus the link to type into a TV). Putting the code in the query string means it works on any static host with no server routing.
 
 **Be ready to say honestly**
 
@@ -190,5 +197,11 @@ The server answers 404 (or 403 for a wrong key). The ticket screen shows the clo
 **15. How does the customer find out their number was called, and where does it fail?**
 A watcher above all screens listens on the shared socket for every queue the phone holds a ticket in. On a match it shows a banner and buzzes if the app is open, or raises a local system notification if the app is in the background. It fails when the operating system suspends the app, because no socket means no update and there is no push server to wake the phone. Notifications are local, so they need no account, token or third-party service.
 
-**16. What would you add with more time?**
+**16. How does the "Leave in X min" feature work, and why is it reliable?**
+It subtracts the customer's travel time and a 2-minute buffer from the wait estimate (`max(0, wait - travel - 2)`) and counts down from the moment the latest snapshot arrived. Every snapshot recomputes it, so it tracks the real speed of the line. The same moment is also given to the phone's own notification scheduler in builds that support it. It is a prediction, not a promise: it is only as good as the wait estimate.
+
+**17. What is the shop display screen, and does it expose customer data?**
+It is a read-only page at `/?display=CODE` that shows the serving number, the next five numbers and the join QR, and updates live over the same Socket.io room as the phones. It uses the public snapshot, which holds numbers only, so no names are shown and no owner key is needed.
+
+**18. What would you add with more time?**
 Push notifications that reach a sleeping phone, owner accounts (so a queue survives a lost phone and works from phone and browser together), multiple counters, a shop display screen, HTTPS and rate limiting, and deployment.

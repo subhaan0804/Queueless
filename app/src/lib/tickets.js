@@ -1,4 +1,5 @@
 import { api } from './api';
+import { cancelLeaveReminder } from './notify';
 import { removeTicket } from './storage';
 
 // Gives up a ticket: tells the server (so the owner never calls a ghost), then forgets it here.
@@ -12,5 +13,6 @@ export async function leaveTicket(ticket) {
     // nothing left to leave on the server, only the local copy to remove.
     if (e.status !== 404 && e.status !== 409) throw e;
   }
+  await cancelLeaveReminder(ticket.ticketId); // a ticket that is gone must not buzz later
   return removeTicket(ticket.ticketId);
 }

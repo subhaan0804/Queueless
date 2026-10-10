@@ -94,6 +94,16 @@ These are local notifications raised by the phone itself, so there is no Firebas
 - **Development or production build:** both work. Build one with `npx expo run:android` (needs the Android SDK) or EAS Build.
 - **The limit:** the alerts need the app's connection to the server to be alive. A phone the system has fully put to sleep, or an app that was swiped away, is not reached.
 
+## Leave-in timer
+
+On a waiting ticket the customer taps how many minutes away they are (Here, 5, 10, 20 or 30). The ticket then says **"Leave in N min."**, turning to **"Leave now."** when it is time to set off. It counts down by itself and follows the line: when people are served faster or slower, the time moves. At that moment the phone shows a banner and buzzes. In a development or production build it also schedules a system notification for the same moment, so it can arrive when the app is in the background.
+
+The time is the estimated wait minus the distance, minus a 2-minute buffer, so the person arrives before their number is called.
+
+## Shop display screen
+
+The web admin can show a screen for a TV or wall monitor: the number being served in giant type that rolls when it changes, the next five numbers, and the QR and code to join. Open the dashboard in the browser and press **Open display**, or open the link it shows under the code (`http://<host>:8081/?display=<CODE>`, using the address you use for the admin) on any other computer or TV browser on the same network. To get a link a TV can use, open the admin through the computer's network address (for example `http://192.168.0.10:8081`, shown by `npx expo start`) rather than `localhost`, since `localhost` only means "this computer". The display is public and read-only, and shows numbers only, never names.
+
 ## How it fits together
 
 - You ask by REST, you are told by socket. REST (`/api/...`) changes things; Socket.io only pushes the shared `queue:update` snapshot to everyone in the queue's room.

@@ -3,7 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from './theme';
 import { ticketRoute } from './lib/nav';
 import useTicketAlerts from './hooks/useTicketAlerts';
-import CalledBanner from './components/CalledBanner';
+import AlertBanner from './components/AlertBanner';
 import Home from './screens/Home';
 import StartQueue from './screens/StartQueue';
 import OwnerDashboard from './screens/OwnerDashboard';
@@ -26,7 +26,7 @@ export function pickStart({ tickets, owner }) {
 // so a call is announced wherever the person happens to be.
 export default function Navigator({ start }) {
   const paramsFor = (name) => (start.name === name ? start.params : undefined);
-  const { called, open, dismiss } = useTicketAlerts(navigationRef);
+  const { alert, open, dismiss } = useTicketAlerts(navigationRef);
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
@@ -41,7 +41,7 @@ export default function Navigator({ start }) {
         <Stack.Screen name="Tickets" component={Tickets} />
         <Stack.Screen name="DaySummary" component={DaySummary} />
       </Stack.Navigator>
-      <CalledBanner ticket={called} onOpen={open} onDismiss={dismiss} />
+      <AlertBanner alert={alert} onOpen={open} onDismiss={dismiss} />
     </NavigationContainer>
   );
 }

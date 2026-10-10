@@ -11,6 +11,7 @@ import useReducedMotion from '../hooks/useReducedMotion';
 import ActionDock from '../components/ActionDock';
 import BigButton from '../components/BigButton';
 import ConfirmSheet from '../components/ConfirmSheet';
+import DisplayLink from '../components/DisplayLink';
 import QrSheet from '../components/QrSheet';
 import QueueOptionsSheet from '../components/QueueOptionsSheet';
 import Screen from '../components/Screen';
@@ -89,6 +90,7 @@ export default function OwnerDashboard({ navigation, route }) {
           <Text style={[type.body, styles.ink]}>Code {owner.code}</Text>
           <BigButton label="Show QR" variant="outline" height={48} onPress={() => setSheet('qr')} />
         </View>
+        <DisplayLink code={owner.code} />
       </View>
 
       <ServingStrip number={serving} name={servingName} reduceMotion={reduceMotion} />
