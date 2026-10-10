@@ -254,6 +254,7 @@ npx expo export --platform web
 | File | Variable | Required | Purpose | Example |
 | --- | --- | --- | --- | --- |
 | `server/.env` | `MONGO_URI` | Yes | MongoDB connection string | `mongodb+srv://user:password@cluster.mongodb.net/queueless` |
+| `server/.env` | `MONGO_DB_NAME` | No | Explicit MongoDB database name; overrides the URI path | `QLess` |
 | `server/.env` | `PORT` | No | HTTP and Socket.io port; defaults to `4000` | `4000` |
 | `server/.env` | `EXPO_PUSH_URL` | For background notifications | Expo Push Service endpoint | `https://exp.host/--/api/v2/push/send` |
 | `app/.env` | `EXPO_PUBLIC_API_URL` | Native: yes; web: optional | API and Socket.io origin | `http://192.168.1.20:4000` |
