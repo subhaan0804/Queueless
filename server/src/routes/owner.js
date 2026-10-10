@@ -4,6 +4,7 @@ const Ticket = require('../models/Ticket');
 const { publish } = require('../lib/snapshot');
 const { requireOwner } = require('../lib/auth');
 const { HttpError } = require('../lib/http');
+const { notifyTicketCalled } = require('../lib/push');
 
 const router = express.Router();
 
@@ -22,11 +23,13 @@ async function advance(queue, finishedStatus) {
     { queueId: queue._id, status: 'serving' },
     { status: finishedStatus, finishedAt: now }
   );
-  await Ticket.findOneAndUpdate(
+  const next = await Ticket.findOneAndUpdate(
     { queueId: queue._id, status: 'waiting' },
     { status: 'serving', calledAt: now },
-    { sort: { sortKey: 1 } }
+    { sort: { sortKey: 1 }, returnDocument: 'after' }
   );
+  if (next) notifyTicketCalled(next, queue.name);
+  return next;
 }
 
 // Named lists for the owner's screen; the public snapshot has numbers only.

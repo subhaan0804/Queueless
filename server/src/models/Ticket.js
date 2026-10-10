@@ -6,6 +6,8 @@ const ticketSchema = new mongoose.Schema({
   // Orders the line. Equals `number` until a recall moves someone to the back.
   sortKey: { type: Number, required: true },
   name: { type: String, default: '' },
+  // Device token used by the server to notify a customer when this ticket is called.
+  expoPushToken: { type: String, default: '' },
   status: {
     type: String,
     enum: ['waiting', 'serving', 'done', 'skipped', 'left'],
