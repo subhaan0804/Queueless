@@ -8,15 +8,17 @@ import { loadOwner, loadTickets } from './src/lib/storage';
 import Navigator, { pickStart } from './src/Navigator';
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ Archivo_400Regular, Archivo_600SemiBold, ArchivoNarrow_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ Archivo_400Regular, Archivo_600SemiBold, ArchivoNarrow_700Bold });
   const [start, setStart] = useState(null);
 
   useEffect(() => {
-    Promise.all([loadTickets(), loadOwner()]).then(([tickets, owner]) => setStart(pickStart({ tickets, owner })));
+    Promise.all([loadTickets(), loadOwner()])
+      .then(([tickets, owner]) => setStart(pickStart({ tickets, owner })))
+      .catch(() => setStart({ name: 'Home' }));
   }, []);
 
   // Same blue as the splash, so the hand-off to the first screen is seamless.
-  if (!fontsLoaded || !start) return <View style={{ flex: 1, backgroundColor: colors.blue }} />;
+  if ((!fontsLoaded && !fontError) || !start) return <View style={{ flex: 1, backgroundColor: colors.blue }} />;
 
   return (
     <SafeAreaProvider>
