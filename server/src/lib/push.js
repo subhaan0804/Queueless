@@ -32,7 +32,9 @@ const notifyTicketCalled = (ticket, queueName) =>
     body: `Number ${ticket.number} at ${queueName}. Go to the counter now.`,
   });
 
+// Nobody may be waiting after the call, so a missing ticket is normal, not an error.
 const notifyTicketNext = (ticket, queueName) =>
+  ticket &&
   send(ticket, {
     title: 'You are next',
     body: `Number ${ticket.number} at ${queueName}. Be ready to go to the counter.`,

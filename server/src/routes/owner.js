@@ -33,7 +33,7 @@ async function advance(queue, finishedStatus) {
     notifyTicketCalled(next, queue.name);
     // Whoever is now first in line is told to get ready.
     const upNext = await Ticket.findOne({ queueId: queue._id, status: 'waiting' }).sort({ sortKey: 1 });
-    notifyTicketNext(upNext, queue.name);
+    if (upNext) notifyTicketNext(upNext, queue.name);
   }
   return next;
 }
